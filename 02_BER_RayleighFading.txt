@@ -1,0 +1,36 @@
+clear
+N=10^6; %no of bits or symbols
+%trasnmitter
+ip=rand(1,N)>0.5; %generating 0,1 with equal probability
+s = 2*ip-1; %bpsk modulation 0->-1;1->0
+Eb_NO_dB=(0:50); %multiple Eb/NO values
+for ii=1:length(Eb_NO_dB)
+n=1/sqrt(2)*(randn(1,N)+1i*randn(1,N)); %white gaussian noise. 0dB variance
+h=1/sqrt(2)*(randn(1,N)+1i*randn(1,N)); %rayleigh channel and noise addition
+y=h.*s+10^(-Eb_NO_dB(ii)/20)*n;
+%equaliazation
+yHat=y./h;
+%receiver - hars desicion decoding
+ipHat=real(yHat)>0;
+
+%counting the errors
+%(nerr(ii)) = size(find(ip-ipHat),2);
+nerr(ii) = size(find(ip-ipHat),2);
+end
+simBer = nerr/N; %simulated ber
+theoryBerAWGN = 0.5*erfc(sqrt(10.^(Eb_NO_dB/10))); %theoretical ber
+EbNOLin=10.^(Eb_NO_dB/10);
+theoryBer=0.5.*(1-sqrt(EbNOLin./(EbNOLin+1)));
+%plot
+close all
+figure
+semilogy(Eb_NO_dB,theoryBerAWGN,'cd-','LineWidth',2);
+hold on
+semilogy(Eb_NO_dB,theoryBer,'bp-','LineWidth',2);
+semilogy(Eb_NO_dB,simBer,'mx-','LineWidth',2);
+axis([0 50 10^-5 0.5])
+grid on
+legend('AWGN-Theory','Rayleigh-Theory','Rauleigh-Simulation');
+xlabel('Eb/NO,dB');
+ylabel('Bit Erroe Rate');
+title('BER for BPSK modulation in Rayleigh channel');
