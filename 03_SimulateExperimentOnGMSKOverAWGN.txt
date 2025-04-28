@@ -1,0 +1,67 @@
+clear;
+clc;
+
+%---------Input Fields------------------------
+N = 1e6; % Number of input bits
+EbN0dB = -10:2:20; % Eb/N0 range in dB for simulation
+%---------------------------------------------
+
+% Generating uniformly distributed random bits (0s and 1s)
+data = randi([0 1], 1, N);
+
+% Ensuring even number of bits for QPSK mapping
+if mod(N, 2) ~= 0
+    N = N - 1;
+    data = data(1:N);
+end
+
+% QPSK Mapping
+oddData = data(1:2:end);
+evenData = data(2:2:end);
+qpskModulated = sqrt(1/2) * (1i*(2*oddData - 1) + (2*evenData - 1));
+
+M = 4; % Number of Constellation points M=2^k for QPSK, k=2
+Rm = log2(M); % Rm = log2(M) for QPSK, M=4
+Rc = 1; % Rc = code rate for a coded system. Since no coding is used Rc=1
+BER = zeros(1, length(EbN0dB)); % Placeholder for BER values
+
+% Simulation over different Eb/N0 values
+for idx = 1:length(EbN0dB)
+    % Convert Eb/N0 from dB to linear
+    EbN0 = 10^(EbN0dB(idx)/10);
+   
+    % Noise standard deviation for AWGN
+    noiseSigma = sqrt(1 / (2 * Rm * Rc * EbN0));
+   
+    % AWGN noise (complex)
+    noise = noiseSigma * (randn(1, length(qpskModulated)) + 1i * randn(1, length(qpskModulated)));
+   
+    % Received signal after adding noise
+    received = qpskModulated + noise;
+   
+    % Threshold Detection
+    detected_real = real(received) >= 0;
+    detected_img = imag(received) >= 0;
+   
+    % Reconstruct estimated bits
+    estimatedBits = reshape([detected_img; detected_real], 1, []);
+   
+    % BER Calculation
+    BER(idx) = sum(xor(data, estimatedBits)) / length(data);
+end
+
+% Plotting the results
+figure;
+semilogy(EbN0dB, BER, 'r--', 'LineWidth', 1.5);
+hold on;
+
+% Theoretical BER for QPSK
+theoreticalBER = 0.5 * erfc(sqrt(10.^(EbN0dB / 10)));
+semilogy(EbN0dB, theoreticalBER, 'b*', 'LineWidth', 1.5);
+
+% Plot settings
+title('SNR per bit (Eb/N0) vs BER Curve for QPSK Modulation');
+xlabel('SNR per bit (Eb/N0) in dB');
+ylabel('Bit Error Rate (BER)');
+legend('Simulated', 'Theoretical-QPSK');
+grid on;
